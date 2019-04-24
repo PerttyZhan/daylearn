@@ -1,0 +1,19 @@
+{
+  "name": "cli",
+  "version": "1.0.0",
+  "description": "custome cli for project",
+  "main": "index.js",
+  "bin": {
+    "custom": "./bin/custom.js"
+  },
+  "scripts": {},
+  "keywords": [
+    "cli",
+    "node"
+  ],
+  "author": "zhanheng",
+  "license": "ISC",
+  "devDependencies": {
+    "commander": "^2.19.0"
+  }
+}

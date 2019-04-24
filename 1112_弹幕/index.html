@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+  <head>
+    <meta charset="utf-8" />
+    <title>弹幕</title>
+    <style>
+      video {
+        display: block;
+        object-fit: fill;
+        margin: 100px auto;
+      }
+      .canvas-text {
+        padding: 0;
+        margin: 0;
+        line-height: 1;
+      }
+      .cover-canvas {
+        position: absolute;
+        border: 1px solid red;
+      }
+    </style>
+  </head>
+  <body>
+    <video src="./CIP课堂巡查业务.mp4" id="video" controls width="720" height="480"></video>
+  </body>
+  <script>
+    (function (doc, win){
+      var defaults = {
+        pd: 10,
+        limitOneWidth: 100,
+        color: '#fff',
+        speed: 1,
+        opacity: 0.5,
+        fontSize: 20,
+        data: []
+      }
+      
+      function Barrage (opt = {}, ctx = {}) {
+        this.flag = false;  // 是否停止播放
+        this.texts = [];
+        Object.assign(this, {
+          color: ctx.color,
+          speed: ctx.speed,
+          opacity: ctx.opacity,
+          fontSize: ctx.fontSize,
+        }, {
+          ...opt,
+          context: ctx,
+          options: opt
+        })
+        this.initText();
+        this.init();
+        return this;
+      }
+
+      Barrage.prototype = {
+        constructor: Barrage,
+        init: function () {
+          let { fontSize, value, context } = this;
+          
+          this.x = context.cav.width;
+          this.y = context.cav.height * Math.random();
+
+          if ((this.y + this.height) > context.cav.height) {
+            this.y = context.cav.height - this.height;
+          }
+
+          if ((this.y - this.height) < 0) {
+            this.y = 0
+          }
+          console.log(this)
+        },
+        initText: function () {
+          let { value, context, fontSize } = this;
+          let vals = value.split('');
+          let lineWidth = 0;
+          let lastIndex = 0, startIndex = 0;
+          let strs = [];
+          let allHeight = 0
+          
+          context.ctx.font = `bold ${fontSize}px Arial`;
+          
+          vals.map(item => {
+            lineWidth += context.ctx.measureText(item).width;
+            if (lineWidth > context.limitOneWidth) {
+              strs.push(value.substring(startIndex, lastIndex));
+              startIndex = lastIndex;
+              allHeight += fontSize;
+              lineWidth = 0;
+            } else {
+              lastIndex++;
+            }
+          });
+          
+          this.width = context.limitOneWidth;
+          this.height = allHeight;
+          this.texts = strs;
+        },
+        render: function () {
+          let { context, x, y, color, fontSize, value, flag, speed, width, height, texts } = this;
+          if (this.flag) {
+            return ;
+          }
+          
+          context.ctx.save();
+          context.ctx.fillStyle = '#000';
+          context.ctx.globalAlpha = 0.4;
+          context.ctx.fillRect(x - context.pd, y - fontSize - context.pd, width + context.pd * 2, height + context.pd * 2);
+          context.ctx.restore();
+          
+          // context.ctx.textAlign = 'center';
+          // context.ctx.textBaseline = 'middle';
+          context.ctx.font = `bold ${fontSize}px Arial`;
+          context.ctx.fillStyle = color;
+          texts.map((item, index) => {
+            context.ctx.fillText(item, x, y + index * fontSize);
+          })
+          
+          this.x = x - speed;
+          if (this.x < -width ) {
+            this.flag = true;
+            console.log('停止');
+          }
+        }
+      }
+
+      function CanvasBarrage (id, opt = {}) {
+        this.video = doc.getElementById(id);
+        Object.assign(this, defaults, opt);
+        this.init(); 
+        return this;
+      }
+
+      CanvasBarrage.prototype = {
+        constructor: CanvasBarrage,
+        init: function () {
+          let { video, data } = this;
+
+          let cav = doc.createElement('canvas');
+          let ctx = cav.getContext('2d')
+
+          cav.width = video.width;
+          cav.height = video.height - 34;
+          cav.setAttribute('class', 'cover-canvas');
+          cav.style.top = video.offsetTop + 'px';
+          cav.style.left = video.offsetLeft + 'px';
+          cav.style.zIndex = '1000';
+          doc.body.appendChild(cav);
+
+          this.cav = cav;
+          this.ctx = ctx;
+          this.barrages = this.data.map(item => new Barrage(item, this));
+
+          this.initEvent();
+        },
+        initEvent: function () {
+          let self = this;
+          let { video } = this;
+          
+          video.addEventListener('timeupdate', function () {
+            self.currentTime = video.currentTime;
+          })
+          video.addEventListener('play', function () {
+            self.start.call(self);
+          })
+          video.addEventListener('pause', function () {
+            self.stop.call(self);
+          })
+        },
+        render: function () {
+          this.clearCav();
+          this.barrages.map(item => {
+            if (item.time <= this.currentTime) {
+              item.render();
+            }
+          });
+          this.animatedID = requestAnimationFrame(this.render.bind(this))
+        },
+        clearCav: function () {
+          this.ctx.clearRect(0, 0, this.cav.width, this.cav.height);
+        },
+        start: function () {
+          this.render();
+        },
+        stop: function () {
+          cancelAnimationFrame(this.animatedID)
+        }
+      };
+
+      win.CanvasBarrage = CanvasBarrage
+    })(document, window)
+    
+    window.onload = function () {
+      var CanBarrage = new CanvasBarrage('video', {
+        data: [
+          {value: 'asdasdsadasda吗我打阿萨德按时啊打算啊大', time: 30, color: 'red', speed: 1},
+          {value: 'asdasdsadasdasadsad吗', time: 5, speed: 1.4}
+        ]
+      });
+    }
+  </script>
+</html>

@@ -1,0 +1,255 @@
+<!Doctype html>
+<html lang="zh-cn">
+  <head>
+    <meta charset="utf-8">
+    <title>openlayer4 图标</title>
+    <link href="./css/ol.css" rel="stylesheet">
+    <link rel="stylesheet" href="./css/icon.css">
+    <script src="./js/ol-debug.js" charset="utf-8"></script>
+    <style>
+      .ol-popup {
+        position: absolute;
+        background-color: white;
+        -webkit-filter: drop-shadow(0 1px 4px rgba(0,0,0,0.2));
+        filter: drop-shadow(0 1px 4px rgba(0,0,0,0.2));
+        padding: 15px;
+        border-radius: 10px;
+        border: 1px solid #cccccc;
+        bottom: 38px;
+        left: -43px;
+        min-width: 280px;
+      }
+      .ol-popup:after, .ol-popup:before {
+        top: 100%;
+        border: solid transparent;
+        content: " ";
+        height: 0;
+        width: 0;
+        position: absolute;
+        pointer-events: none;
+      }
+      .ol-popup:after {
+        border-top-color: white;
+        border-width: 10px;
+        left: 48px;
+        margin-left: -10px;
+      }
+      .ol-popup:before {
+        border-top-color: #cccccc;
+        border-width: 11px;
+        left: 48px;
+        margin-left: -11px;
+      }
+      .ol-popup-closer {
+        text-decoration: none;
+        position: absolute;
+        top: 2px;
+        right: 8px;
+      }
+      .ol-popup-closer:after {
+        content: "✖";
+      }
+    </style>
+    <style>
+      .map{
+        width: 100%;
+        height: 400px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="map" id="map"></div>
+    <div id="navigate-container">
+    </div>
+    <script type="text/javascript">
+      var styleCache = {}
+      // layer
+      var raster = new ol.layer.Tile({
+        source: new ol.source.OSM()
+      })
+
+      var count = 20000;
+      var features = new Array(count);
+      var e = 4500000;
+      for (var i = 0; i < count; ++i) {
+        var coordinates = [2 * e * Math.random() - e, 2 * e * Math.random() - e];
+        features[i] = new ol.Feature(new ol.geom.Point(coordinates));
+      }
+      var source = new ol.source.Vector({
+        features: features
+      })
+      
+      var clusterSource = new ol.source.Cluster({
+        distance: 100,
+        source: source
+      })
+      var clusterLayer = new ol.layer.Vector({
+        source: clusterSource,
+        style: function (feature) {
+          var size = feature.get('features').length;
+          var style = styleCache[size];
+          if (!style) {
+            if (size > 1) {
+              style = []
+
+              style.push(new ol.style.Style({
+                geometry: function (feature) {
+                  let coordinates = feature.getGeometry().getCoordinates()
+                  let resolution = gais.getView().getResolution()
+                  let boxY = 15 * resolution
+                  let boxX = 50 * resolution
+
+                  let geom = new ol.geom.LineString([
+                    [coordinates[0], coordinates[1]],
+                    [coordinates[0], coordinates[1] + boxY],    // 真实距离 = px * 分辨率
+                  ])
+
+                  return geom
+                },
+                stroke: new ol.style.Stroke({
+                  color: 'red',
+                  width: 1
+                })
+              }))
+
+              style.push(new ol.style.Style({
+                // 矩形
+                geometry: function (feature) {
+                  let coordinates = feature.getGeometry().getCoordinates()
+                  let geom = new ol.geom.Polygon(null)
+                  let resolution = gais.getView().getResolution()
+                  let boxX = 50 * resolution
+                  let boxY = 15 * resolution
+
+                  let topLeft = [coordinates[0] - boxX, coordinates[1] - boxY]
+                  let bottomLeft = [coordinates[0] - boxX, coordinates[1] + boxY]
+                  let bottomRight = [coordinates[0] + boxX, coordinates[1] + boxY]
+                  let topRight = [coordinates[0] + boxX, coordinates[1] - boxY]
+
+                  geom.setCoordinates([
+                    [
+                      topLeft,
+                      bottomLeft,
+                      bottomRight,
+                      topRight,
+                      topLeft
+                    ]
+                  ])
+                  return geom
+                },
+                // 直线
+                // geometry: function (feature) {
+                //   let coordinates = feature.getGeometry().getCoordinates()
+                //   let geom = new ol.geom.LineString([
+                //     coordinates,
+                //     [coordinates[0] + 10 * gais.getView().getResolution(), coordinates[1]],    // 真实距离 = px * 分辨率
+                //   ])
+                //   return geom
+                // },
+                // stroke: new ol.style.Stroke({
+                //   color: 'red',
+                //   width: 1
+                // }),
+                fill: new ol.style.Fill({
+                  color: 'rgba(255, 255, 0, .2)'
+                }),
+                text: new ol.style.Text({
+                  text: size.toString(),
+                  fill: new ol.style.Fill({
+                    color: '#000'
+                  })
+                }),
+                zIndex: 1
+              }))
+              
+              // style.push(new ol.style.Style({
+              //   geometry: function (feature) {
+              //     var coordinates = feature.getGeometry().getCoordinates();
+              //     return new ol.geom.Point(coordinates);
+              //   },
+              //   image: new ol.style.Icon({
+              //     crossOrigin: 'anonymous',
+              //     src: './images/camera.png',
+              //     scale: 0.2
+              //   }),
+              //   zIndex: 10
+              // }))
+            } else {
+              style = new ol.style.Style({
+                image: new ol.style.Icon({
+                  crossOrigin: 'anonymous',
+                  src: './images/camera.png',
+                  scale: 0.6
+                })
+              })
+            }
+            
+            styleCache[size] = style;
+          }
+          return style;
+        }
+      })
+
+      var vectorSource = new ol.source.Vector()
+      var vectorLayer = new ol.layer.Vector({
+        source: vectorSource,
+        style: new ol.style.Style({
+          stroke: new ol.style.Stroke({
+            color: 'red',
+            width: 1
+          }),
+          fill: new ol.style.Fill({
+            color: 'rgba(255, 255, 255, .2)'
+          })
+        })
+      })
+
+
+      // view
+      var view = new ol.View({
+        center: [0, 0],
+        zoom: 2
+      })
+
+      // target
+      var target = 'map'
+
+      var gais = new ol.Map({
+        layers: [raster, clusterLayer, vectorLayer],
+        controls: ol.control.defaults({
+          attribution: false,
+          zoom: false
+        }).extend([
+          new ol.control.MousePosition()
+        ]),
+        interactions: ol.interaction.defaults().extend([
+          // new ol.interaction.Draw({
+          //   source: vectorSource,
+          //   type: 'LineString',
+          //   geometryFunction (coordinates, geom) {
+          //     !geom && (geom = new ol.geom.Polygon(null))
+
+          //     let start = coordinates[0]
+          //     let end = coordinates[1]
+
+          //     geom.setCoordinates([
+          //       [
+          //         start,
+          //         [start[0], end[1]],
+          //         end,
+          //         [end[0], start[1]],
+          //         start
+          //       ]
+          //     ])
+          //     return geom
+          //   },
+          //   // geometryFunction: ol.interaction.Draw.createBox(),
+          //   maxPoints: 4
+          // })
+        ]),
+        view: view,
+        target: target
+      })
+    </script>
+  </body>
+</html>

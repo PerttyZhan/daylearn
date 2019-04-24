@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>搜索优化</title>
+  </head>
+
+  <body>
+  </body>
+  <script>
+    window.onload = function () {
+      let datas = [
+        {
+          id: 1,
+          message: 'ack',
+          fruit: 'apple',
+          unit: 'an',
+          name: 'anna',
+        },
+        {
+          id: 2,
+          message: 'ack',
+          fruit: 'banana',
+          unit: 'an',
+          name: 'lee',
+        }
+      ];
+      
+      function Leap (id, value) {
+        this.ids = id ? [id] : [];
+        this.value = value || '';
+        this.children = {};
+      }
+
+      Leap.prototype.share = function (id) {
+        let hasId = this.ids.indexOf(id) !== -1;
+        hasId || this.ids.push(id);
+      }
+      
+      function Tree (data) {
+        this.data = data;
+        this.root = new Leap();
+        this.searchName = 'name';
+
+        this.init();
+        return this;
+      }
+
+      Tree.prototype.init = function () {
+        let data = this.data;
+        let searchName = this.searchName;
+        let root = this.root;
+
+        data.forEach(function (item, index) {
+          let seachValue = item[searchName];
+          let values = Object.values(item);
+
+          values.map(function (chars) {
+            let tempRoot = root;
+            Array.from(String(chars)).map(function (char, charIndex) {
+              let reachEnd = chars.length - charIndex - 1;
+              if (tempRoot.children[char]) {
+                // if (!reachEnd) {
+                  tempRoot.children[char].share(item.id);
+                // }
+              } else {
+                tempRoot.children[char] = new Leap(
+                  item.id,
+                  reachEnd ? '' : seachValue
+                )
+              }
+              tempRoot = tempRoot.children[char];
+            })
+          })
+        })
+      }
+
+      let T = new Tree(datas);
+
+      console.log(T);
+    }
+  </script>
+</html>

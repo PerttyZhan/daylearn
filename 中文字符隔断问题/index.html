@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>中文字符影响</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <style>
+      * {margin: 0; padding: 0;}
+      .box {
+        position: relative;
+        width: 200px;
+        height: 40px;
+        line-height: 20px;
+        margin: 100px auto;
+        word-break:keep-all;
+        word-wrap: break-word;
+        font-size: 12px;
+      }
+      .box:after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: 1px solid red;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="box" id="box" style="letter-spacing: -2px">
+        
+    </div>
+    <div class="box" id="box">
+        默认组织/222222222级及+{ ： “ ： ： ？ ？ ” ：：：：：：：：：：：：：：：
+    </div>
+  </body>
+  <script type="text/javascript">
+    var str = '默认组织/222222222级及+{ ： “ ： ： ？ ？ ” ：：：：：：：：：：：：：：：'
+    document.getElementById('box').innerHTML = str.split('').join(' ')
+  </script>
+</html>

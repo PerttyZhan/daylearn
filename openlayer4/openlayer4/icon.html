@@ -1,0 +1,461 @@
+<!Doctype html>
+<html lang="zh-cn">
+  <head>
+    <meta charset="utf-8">
+    <title>openlayer4 图标</title>
+    <link href="./css/ol.css" rel="stylesheet">
+    <link rel="stylesheet" href="./css/icon.css">
+    <script src="./js/ol-debug.js" charset="utf-8"></script>
+    <style>
+      .ol-popup {
+        position: absolute;
+        background-color: white;
+        -webkit-filter: drop-shadow(0 1px 4px rgba(0,0,0,0.2));
+        filter: drop-shadow(0 1px 4px rgba(0,0,0,0.2));
+        padding: 15px;
+        border-radius: 10px;
+        border: 1px solid #cccccc;
+        bottom: 38px;
+        left: -43px;
+        min-width: 280px;
+      }
+      .ol-popup:after, .ol-popup:before {
+        top: 100%;
+        border: solid transparent;
+        content: " ";
+        height: 0;
+        width: 0;
+        position: absolute;
+        pointer-events: none;
+      }
+      .ol-popup:after {
+        border-top-color: white;
+        border-width: 10px;
+        left: 48px;
+        margin-left: -10px;
+      }
+      .ol-popup:before {
+        border-top-color: #cccccc;
+        border-width: 11px;
+        left: 48px;
+        margin-left: -11px;
+      }
+      .ol-popup-closer {
+        text-decoration: none;
+        position: absolute;
+        top: 2px;
+        right: 8px;
+      }
+      .ol-popup-closer:after {
+        content: "✖";
+      }
+    </style>
+    <style>
+      .map{
+        width: 100%;
+        height: 400px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="map" id="map"></div>
+    <div id="navigate-container">
+      <input type="button" onClick="appendCamer()" value="添加监控点" />
+      <input type="button" onClick="appendDevice()" value="添加设备" />
+      <input type="button" onClick="hideDevice()" value="隐藏设备" />
+      <input type="button" onClick="showDevice()" value="显示设备" />
+    </div>
+    <div id="popup" class="ol-popup">
+      <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+      <div id="popup-content"></div>
+    </div>
+    <script type="text/javascript">
+
+      function appendCamer () {
+        gais.appendIconWithDraw()
+      }
+      function appendDevice () {
+        gais.appendIconWithDraw('device')
+      }
+      function hideDevice () {
+        gais.hideFeature('device')
+      }
+      function showDevice () {
+        gais.showFeature('device')
+      }
+      const defaultStyle = {
+        size: [],         // 大小
+        coordinate: [],   // 坐标[x, y]
+        style: '',        // 样式
+        id: '',           // id
+        events: {},       // 事件
+        map: null         // 地图
+      }
+
+      // class TextIcon {
+      //   constructor (opt = {}) {
+      //     Object.assign(this, {
+      //       fontSize: 16,
+      //       map: null,
+      //       coordinate: [],
+      //       id: ''
+      //     }, opt)
+
+      //     let map = this.map
+      //     let [x, y] = map.getView().getCenter()
+      //     this.coordinate = {
+      //       x: opt.x || x,
+      //       y: opt.y || y
+      //     }
+
+      //     this.init()
+      //   }
+
+      //   init () {
+      //     let {coordinate} = this
+      //     let vector = new ol.Feature({
+      //       geometry: new ol.geom.Point([coordinate.x, coordinate.y])
+      //     })
+
+      //     vector.setStyle(new ol.style.Style({
+      //       text: new ol.style.Text({
+      //         font: 'Normal 20px element-icons',
+      //         text: '\e600',
+      //         fill: new ol.style.Fill({color: 'red'}),
+      //         textBaseline: 'bottom'
+      //       })
+      //     }))
+
+      //     this.instance = vector
+      //     return this
+      //   }
+      // }
+
+      class Icon {
+        constructor (opt = {}) {
+          Object.assign(this, defaultStyle,opt)
+          this.instance = null
+          let map = this.map
+          this.init()
+          this.initEvent()
+        }
+
+        init () {
+          let {coordinate, style, id, props} = this
+          let vector = new ol.Feature({
+            geometry: new ol.geom.Point(coordinate),
+            ...props
+          })
+          let src = style.src
+          let image = new Image()
+          image.src = src
+          image.onload = () => {
+            let targetScale = this._cacurlateScale(image.width, image.height)
+            vector.setStyle(new ol.style.Style({
+              image: new ol.style.Icon({
+                crossOrigin: 'anonymous',
+                src: src,
+                scale: targetScale
+              })
+            }))
+          }
+          vector.setId(id)
+          this.instance = vector
+          return this
+        }
+
+        initEvent () {
+          let {instance, events} = this
+
+          for (let name in events) {
+            instance.on(name, events[name].bind(this), {test: 'aaaa'})
+          }
+        }
+
+        _cacurlateScale (imageWidth, imageHeight) {
+          let [w, h] = this.size
+          let widthScale = (w / imageWidth).toFixed(2)
+          let heightScale = (h / imageHeight).toFixed(2)
+
+          return Math.min(widthScale, heightScale)
+        }
+      }
+
+      class Map {
+        constructor (opt = {}) {
+          this.map = null
+          this.layers = {}
+          this.center = opt.center || [104.06, 30.67]
+          this.target = opt.target || ''
+          this.features = []
+
+          this.init()
+          this.initEvent()
+        }
+
+        init () {
+          let { layers, target, center, _createLayer } = this
+          let lys = ['map', 'graph'].map((t) => _createLayer.call(this, t))
+
+          let view = new ol.View({
+            center: center,
+            projection: 'EPSG:4326',
+            zoom: 16
+          })
+          let map = new ol.Map({
+            // controls: ol.control.defaults({
+            //   attribution: false,
+            //   rotate: false,
+            //   zoom: false
+            // }),
+            controls: ol.control.defaults().extend([
+              new ol.control.FullScreen(),
+              new ol.control.MousePosition(),
+              new ol.control.OverviewMap(),
+              new ol.control.Rotate(),
+              new ol.control.ScaleLine(),
+              new ol.control.Zoom(),
+              new ol.control.ZoomSlider(),
+              new ol.control.ZoomToExtent()
+            ]),
+            interactions: ol.interaction.defaults(),
+            target: target,
+            layers: lys,
+            view: view
+          })
+
+          this.mapLayer = lys[0]
+          this.graphLayer = lys[1]
+          this.map = map
+          this.view = view
+          return this
+        }
+
+        initEvent () {
+          let {map, view, graphLayer} = this
+
+          view.on('change:resolution', () => {
+            graphLayer
+              .getSource()
+              .getFeatures()
+              .forEach(f => f.dispatchEvent('change:resolution'))
+          })
+
+          map.on('click', (event) => {
+            map.forEachFeatureAtPixel(event.pixel, (f) => {
+              f.dispatchEvent('click')
+            })
+          })
+        }
+
+        appendIconWithDraw (type = 'camera') {
+          const drawPoint = new ol.interaction.Draw({
+            type: 'Point',
+            style: new ol.style.Style({
+              image: new ol.style.Circle({
+                radius: 7,
+                fill: new ol.style.Fill({
+                  color: [255, 204, 51, .5]
+                })
+              })
+            })
+          })
+
+          drawPoint.on('drawend', ({feature}) => {
+            const coordinate = feature.getGeometry().getCoordinates()
+            this.addIcon({
+              coordinate: coordinate,
+              type: type,
+              id: Math.random().toString(16).slice(2),
+              style: {
+                src: './images/device.png'
+              },
+              size: [80, 80],
+              events: {
+                'change:resolution': (evt) => {
+                  let feature = evt.target
+                  console.log(feature)
+                }
+              }
+            })
+            this.map.removeInteraction(drawPoint)
+          })
+
+          this.map.addInteraction(drawPoint)
+        }
+
+        addIcon (opt = {}) {
+          // let feature = new Icon(Object.assign({
+          //   map: this.map
+          // }, opt))
+
+          // this.features.push(feature)
+          // this.graphLayer.getSource().addFeature(feature.instance)
+
+          // let feature = new TextIcon(Object.assign({
+          //   map: this.map
+          // }, opt))
+
+          // this.features.push(feature)
+          // console.log(feature.instance)
+          // this.graphLayer.getSource().addFeature(feature.instance)
+
+          let feature = new ol.Feature({
+            geometry: new ol.geom.Point(opt.coordinate)
+          })
+          feature.set('type', opt.type)
+          feature.set('visible', true)
+          feature.set('id', Math.random().toString(16).slice(2))
+          this.graphLayer.getSource().addFeature(feature)
+        }
+
+        hideFeature (type = 'camera') {
+          let graphLayer = this.graphLayer
+          let feature = graphLayer.getSource().getFeatures()
+
+          feature.filter(f => {
+            if (f.get('type') === type) {
+              f.set('visible', false)
+            }
+          })
+        }
+
+        showFeature (type = 'camera') {
+          let graphLayer = this.graphLayer
+          let feature = graphLayer.getSource().getFeatures()
+
+          feature.filter(f => {
+            if (f.get('type') === type) {
+              f.set('visible', true)
+            }
+          })
+        }
+
+        _createLayer (type) {
+          let layer = null
+          switch (type) {
+            case 'map':
+              layer = new ol.layer.Tile({
+                source: new ol.source.XYZ({
+                  url: 'http://webst0{1-4}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x={x}&y={y}&z={z}'
+                })
+              })
+              break
+            case 'graph':
+              layer = new ol.layer.Vector({
+                source: new ol.source.Vector(),
+                style: (feature, resolution) => {
+                  const type = feature.get('type')
+                  const visible = feature.get('visible')
+                  let style = null
+                  const nowZoom = this.view.getZoom()
+                 
+                  switch (type) {
+                    case 'camera':
+                      style = new ol.style.Style({
+                        image: new ol.style.Icon({
+                          crossOrigin: 'anonymous',
+                          src: './images/camera.png',
+                          scale: (nowZoom * 0.6 / 16).toFixed(1),
+                          opacity: visible ? 1 : 0
+                        })
+                      })
+                      break
+                    case 'device':
+                      style = new ol.style.Style({
+                        image: new ol.style.Icon({
+                          crossOrigin: 'anonymous',
+                          src: './images/device.png',
+                          scale: (nowZoom * 0.6 / 16).toFixed(1),
+                          opacity: visible ? 1 : 0
+                        })
+                      })
+                    default: 
+                      break
+                  }
+
+                  return [style]
+                }
+              })
+              break
+          }
+          return layer
+        }
+
+      }
+
+      let gais = new Map({
+        target: 'map'
+      })
+      var container = document.getElementById('popup');
+      var content = document.getElementById('popup-content');
+      var closer = document.getElementById('popup-closer');
+
+      var overlay = new ol.Overlay({
+        element: container,
+        autoPan: true,
+        autoPanAnimation: {
+          duration: 250
+        }
+      })
+      closer.onclick = function () {
+        overlay.setPosition(undefined)
+        closer.blur()
+        return false
+      }
+      gais.map.addOverlay(overlay)
+
+      // gais.addIcon({
+      //   id: 'testId',
+      //   props: {
+      //     status: 'active'
+      //   },
+      //   style: {
+      //     src: './images/device.png'
+      //   },
+      //   size: [100, 100],
+      //   events: {
+      //     click (event) {
+      //       let {instance:feature, props} = this
+      //       let {status} = props
+      //       let geometry = feature.getGeometry()
+      //       let coordinate = geometry.getCoordinates()
+            
+            
+      //       geometry.translate(1, 0)
+      //       // content.innerHTML = '<p>You clicked here:</p><code>';
+      //       // overlay.setPosition([coordinate.x, coordinate.y])
+      //       // console.log(feature.getStyle().getImage())
+      //       // if (status == 'active') {
+      //       //   feature
+      //       //     .getStyle()
+      //       //     .setImage(new ol.style.Icon({
+      //       //       src: './images/device-warn.png',
+      //       //       scale: .5
+      //       //     }))
+      //       //   props.status = 'warn'
+      //       // } else {
+      //       //   feature
+      //       //     .getStyle()
+      //       //     .setImage(new ol.style.Icon({
+      //       //       src: './images/device.png',
+      //       //       scale: .5
+      //       //     }))
+      //       //   props.status = 'active'
+      //       // }
+      //       // feature.changed()
+
+
+      //     },
+      //     ['change:resolution'] (event) {
+      //       console.log('change:resolution', event)
+      //     }
+      //   }
+      // })
+
+      // gais.addIcon({
+      //   id: 'testId'
+      // })
+    </script>
+  </body>
+</html>

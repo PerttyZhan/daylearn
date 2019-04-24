@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>promise原理解析</title>
+  </head>
+  <body>
+  </body>
+  <script>
+    function PromiseA (fn) {
+      var state = 'pending'
+      var callbacks = []
+      var value = null
+
+      this.then = function (onFulfilled) {
+        return new PromiseA(function (resolve) {
+          handle({
+            onFulfilled: onFulfilled,
+            resolve: resolve
+          })
+        })
+      }
+
+      function handle (callback) {
+        if (state === 'pending') {
+          callbacks.push(callback)
+          return
+        }
+
+        if (!callback.onFulfilled) {
+          callback.resolve(value)
+          return
+        }
+
+        var ret = callback.onFulfilled(value)
+        callback.resolve(ret)
+      }
+
+      function resolve (newValue) {
+        state = 'onFulfill'
+        value = newValue
+
+        setTimeout(function () {
+          callbacks.forEach(function (callback) {
+            handle(callback)
+          })
+        }, 0)
+      }
+
+      fn(resolve)
+    }
+
+
+    function PromiseB(fn) {
+    var state = 'pending',
+        value = null,
+        callbacks = [];
+
+    this.then = function (onFulfilled) {
+        return new Promise(function (resolve) {
+            handle({
+                onFulfilled: onFulfilled || null,
+                resolve: resolve
+            });
+        });
+    };
+
+    function handle(callback) {
+        if (state === 'pending') {
+            callbacks.push(callback);
+            return;
+        }
+        //如果then中没有传递任何东西
+        if(!callback.onFulfilled) {
+            callback.resolve(value);
+            return;
+        }
+
+        var ret = callback.onFulfilled(value);
+        callback.resolve(ret);
+    }
+
+
+    function resolve(newValue) {
+        if (newValue && (typeof newValue === 'object' || typeof newValue === 'function')) {
+            var then = newValue.then;
+            if (typeof then === 'function') {
+                then.call(newValue, resolve);
+                return;
+            }
+        }
+        state = 'fulfilled';
+        value = newValue;
+        setTimeout(function () {
+            callbacks.forEach(function (callback) {
+                handle(callback);
+            });
+        }, 0);
+    }
+
+    fn(resolve);
+  }
+
+  function PromiseC(fn) {
+    var state = 'pending',
+        value = null,
+        callbacks = [];
+
+    this.then = function (onFulfilled, onRejected) {
+        return new Promise(function (resolve, reject) {
+            handle({
+                onFulfilled: onFulfilled || null,
+                onRejected: onRejected || null,
+                resolve: resolve,
+                reject: reject
+            });
+        });
+    };
+
+    function handle(callback) {
+        if (state === 'pending') {
+            callbacks.push(callback);
+            return;
+        }
+
+        var cb = state === 'fulfilled' ? callback.onFulfilled : callback.onRejected,
+            ret;
+        if (cb === null) {
+            cb = state === 'fulfilled' ? callback.resolve : callback.reject;
+            cb(value);
+            return;
+        }
+        ret = cb(value);
+        callback.resolve(ret);
+    }
+
+    function resolve(newValue) {
+        if (newValue && (typeof newValue === 'object' || typeof newValue === 'function')) {
+            var then = newValue.then;
+            if (typeof then === 'function') {
+                then.call(newValue, resolve, reject);
+                return;
+            }
+        }
+        state = 'fulfilled';
+        value = newValue;
+        execute();
+    }
+
+    function reject(reason) {
+        state = 'rejected';
+        value = reason;
+        execute();
+    }
+
+    function execute() {
+        setTimeout(function () {
+            callbacks.forEach(function (callback) {
+                handle(callback);
+            });
+        }, 0);
+    }
+
+    fn(resolve, reject);
+}
+    var fn = new Promise(function (resolve) {
+      // setTimeout(function () {
+        console.log('a')
+        resolve()
+      // }, 1000)
+    }).then(function () {
+      console.log('b')
+    }).then(function () {
+      console.log('c')
+    })
+
+    // fn.then(function (value) {
+    //   console.log('b')
+    //   // setTimeout(function () {
+    //   //   console.log('b')
+    //   // }, 2000)
+    // }).then(function (value) {
+    //   console.log('c')
+    //   // setTimeout(function () {
+    //   //   console.log('c')
+    //   // }, 1000)
+    // })
+
+
+    // setTimeout(function () {
+    //   fn.then(function (value) {
+    //     console.log('d')
+    //   })
+    // }, 4000)
+
+    // fn.then(function (value) {
+    //   setTimeout(function () {
+    //     console.log('c')
+    //     resolve('c')
+    //   }, 2000)
+    // })
+
+    console.log('开始')
+  </script>
+</html>

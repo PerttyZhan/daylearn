@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>蛮力算法（BF算法）</title>
+  </head>
+
+  <body>
+  </body>
+  <script>
+    
+    /*
+    BF算法的算法思想是：
+    从目标串T的的第一个字符起与模式串P的第一个字符比较。
+    若相等，则继续对字符进行后续的比较；否则目标串从第二个字符起与模式串的第一个字符重新比较。
+    直至模式串中的每个字符依次和目标串中的一个连续的字符序列相等为止，此时称为匹配成功，否则匹配失败。
+     */
+    function bf (source) {
+      this.source = source
+    }
+
+    bf.prototype = {
+      constructor: bf,
+      indexOf: function (target) {
+        var source = this.source
+        var i = 0,
+            j = 0, 
+            k = 1,             // 标志，找到即可返回
+            pos = null
+        var sl = source.length,
+            tl = target.length
+
+        while (k && i <= (sl - tl)) {
+          while (j < tl && (target[j] === source[i + j])) {
+            j++
+          }
+          if (j === tl) {       // 说明一轮比较完成
+            k = 0
+            pos = i
+          }
+          i++
+          j = 0
+        }
+
+        return pos
+      },
+      lastIndexOf: function (target) {
+
+      }
+    }
+
+    var BFMatch = new bf("abc123ckl")
+
+  </script>
+</html>
